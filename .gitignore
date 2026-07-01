@@ -1,43 +1,46 @@
-# Dependencies
-/frontend/node_modules
-/frontend/.pnp
-/frontend/.pnp.js
+# Dependency directories
+node_modules/
+jspm_packages/
+.venv/
+venv/
+env/
+ENV/
 
-# Testing
-/frontend/coverage
+# Build outputs
+dist/
+build/
+out/
+.next/
 
-# Production
-/frontend/.next/
-/frontend/out/
-/frontend/build/
+# Local configuration files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# Cache directories
+__pycache__/
+*.pyc
+.sass-cache/
+.eslintcache
+.parcel-cache
+.cache
+.pytest_cache/
 
-# Local Env Files
-/frontend/.env*.local
+# User uploads and temporary files
+uploads/
+tmp/
+temp/
 
-# Vercel
-/frontend/.vercel
-
-# TypeScript (just in case)
-/frontend/tsconfig.tsbuildinfo
-
-# Python / Backend temporary files
-**/__pycache__/
-**/*.pyc
-**/*.pyo
-**/*.pyd
-**/.env
-**/venv/
-**/.venv/
-**/.pytest_cache/
-**/.coverage
-**/htmlcov/
-
-# System Files
+# OS-specific files
 .DS_Store
+.DS_Store?
+ehthumbs.db
 Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo

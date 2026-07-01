@@ -1,37 +1,77 @@
-"use client";
-
-import { Sliders } from "lucide-react";
-
-const LEVELS = [
-  { label: "Easy", pct: 30, color: "bg-emerald-500" },
-  { label: "Medium", pct: 50, color: "bg-blue-500" },
-  { label: "Hard", pct: 20, color: "bg-rose-500" }
-];
+import { motion } from 'framer-motion'
+import { Activity } from 'lucide-react'
 
 export default function DifficultyChart() {
+  const data = [
+    { label: 'Easy', value: 25, color: 'bg-emerald-500', text: 'text-emerald-400', desc: 'Recall & basic comprehension' },
+    { label: 'Medium', value: 55, color: 'bg-amber-500', text: 'text-amber-400', desc: 'Application & standard analysis' },
+    { label: 'Hard', value: 20, color: 'bg-red-500', text: 'text-red-400', desc: 'Complex evaluation & creation' }
+  ]
+
   return (
-    <div className="p-5 rounded-xl bg-[#09090B] border border-zinc-800 flex flex-col h-full select-none">
-      <div className="flex items-center gap-2 border-b border-zinc-900 pb-3 mb-5">
-        <Sliders className="w-4 h-4 text-blue-500 shrink-0" />
-        <span className="text-white font-bold text-xs">Difficulty Distribution</span>
+    <div className="bg-[#18181B] border border-[#27272A] p-5 rounded-xl flex flex-col justify-between shadow-sm text-left h-full">
+      
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6 pb-3 border-b border-[#27272A]/70">
+        <div className="flex flex-col">
+          <span className="text-xs font-bold text-white uppercase tracking-wider">Difficulty Calibration</span>
+          <span className="text-[10px] text-zinc-500 font-mono mt-0.5">Target question difficulty weighting</span>
+        </div>
+        <Activity className="w-4 h-4 text-blue-500" />
       </div>
 
-      <div className="flex flex-col gap-5 flex-1 justify-center">
-        {LEVELS.map((lvl) => (
-          <div key={lvl.label} className="flex flex-col gap-1.5">
-            <div className="flex justify-between items-center">
-              <span className="text-zinc-300 text-[11px] font-medium">{lvl.label}</span>
-              <span className="text-zinc-400 text-[10px] font-mono font-bold">{lvl.pct}%</span>
-            </div>
-            <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full ${lvl.color}`}
-                style={{ width: `${lvl.pct}%` }}
+      {/* Chart Plotting Area */}
+      <div className="flex items-end justify-around h-44 border-b border-[#27272A] pb-2 relative mb-6">
+        
+        {/* Y-axis Ticks Background Lines */}
+        <div className="absolute inset-x-0 bottom-0 top-0 flex flex-col justify-between pointer-events-none select-none">
+          <div className="border-t border-[#27272A]/30 w-full h-px" />
+          <div className="border-t border-[#27272A]/30 w-full h-px" />
+          <div className="border-t border-[#27272A]/30 w-full h-px" />
+          <div className="border-t border-[#27272A]/30 w-full h-px" />
+        </div>
+
+        {/* Dynamic Vertical Columns */}
+        {data.map((bar) => (
+          <div key={bar.label} className="flex flex-col items-center gap-2.5 z-10 w-16 group relative">
+            
+            {/* Value popover indicator */}
+            <span className={`text-[10px] font-bold ${bar.text} transition-transform duration-200 group-hover:scale-110`}>
+              {bar.value}%
+            </span>
+            
+            {/* Animated Column Bar */}
+            <div className="w-8 bg-[#09090B] h-28 rounded-t-lg overflow-hidden flex items-end">
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: `${bar.value}%` }}
+                transition={{ duration: 1, ease: 'easeOut', delay: 0.1 }}
+                className={`w-full rounded-t-lg ${bar.color} opacity-90 group-hover:opacity-100 transition-opacity`}
               />
             </div>
+            
+            {/* Label */}
+            <span className="text-[11px] font-bold text-zinc-400">
+              {bar.label}
+            </span>
+            
           </div>
         ))}
       </div>
+
+      {/* Footer Metrics details */}
+      <div className="space-y-2">
+        {data.map((item) => (
+          <div key={item.label} className="flex items-center justify-between text-[10px]">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${item.color}`} />
+              <span className="text-zinc-300 font-semibold">{item.label}</span>
+            </div>
+            <span className="text-zinc-500 italic max-w-[200px] truncate">{item.desc}</span>
+          </div>
+        ))}
+      </div>
+
     </div>
-  );
+  )
 }
