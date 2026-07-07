@@ -1,1 +1,1 @@
-# PaperMind AI — Application Package
+# app package

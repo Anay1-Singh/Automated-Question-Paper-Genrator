@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, User, ArrowRight } from 'lucide-react'
+import { Mail, User, ArrowRight, GraduationCap, ShieldCheck } from 'lucide-react'
 import AuthInput from './AuthInput'
 import PasswordInput from './PasswordInput'
 import SocialButton from './SocialButton'
@@ -12,6 +12,7 @@ export default function SignupForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [role, setRole] = useState('student')
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
@@ -64,13 +65,14 @@ export default function SignupForm() {
 
     setIsSubmitting(true)
     try {
-      await api.post('/auth/signup', {
+      await api.post('/auth/send-otp', {
         name: fullName,
         email,
         password,
-        university: 'Delhi Technological University'
+        role
       })
-      navigate('/login')
+      sessionStorage.setItem('signup_email', email)
+      navigate('/verify-otp')
     } catch (err) {
       setFormError(err.message || 'Failed to create account. Please try again.')
     } finally {
@@ -109,6 +111,39 @@ export default function SignupForm() {
           disabled={isSubmitting}
           required
         />
+
+        {/* Role Selector */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold text-zinc-300">I am a</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setRole('student')}
+              disabled={isSubmitting}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                role === 'student'
+                  ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400 shadow-lg shadow-emerald-900/10'
+                  : 'bg-[#09090B] border-[#27272A] text-zinc-400 hover:border-zinc-600 hover:text-zinc-300'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4" />
+              Student
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('admin')}
+              disabled={isSubmitting}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                role === 'admin'
+                  ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-lg shadow-indigo-900/10'
+                  : 'bg-[#09090B] border-[#27272A] text-zinc-400 hover:border-zinc-600 hover:text-zinc-300'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Admin (Teacher)
+            </button>
+          </div>
+        </div>
 
         {/* Email Input */}
         <AuthInput

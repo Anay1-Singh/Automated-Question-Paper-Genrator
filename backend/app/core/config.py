@@ -1,51 +1,50 @@
+"""
+PaperMind AI - Application Configuration
+
+Loads and validates all environment variables using Pydantic Settings.
+Values are read from a .env file or system environment variables.
+"""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """
-    Central configuration loaded from environment variables.
+    Application settings loaded from environment variables.
 
-    Values are read from the .env file at the backend root.
-    Every field listed here becomes available as a typed attribute
-    on the singleton returned by get_settings().
+    Attributes:
+        MONGODB_URI: MongoDB Atlas connection string.
+        DATABASE_NAME: Name of the MongoDB database.
+        JWT_SECRET: Secret key used for signing JWT tokens.
+        JWT_ALGORITHM: Algorithm used for JWT encoding/decoding.
+        ACCESS_TOKEN_EXPIRE_MINUTES: Token expiry duration in minutes.
+        CORS_ORIGINS: Comma-separated list of allowed CORS origins.
+        UPLOAD_DIRECTORY: Directory path for storing uploaded files.
     """
 
-    # ── Application ──────────────────────────────
-    app_name: str = "PaperMind AI"
-    app_env: str = "development"
-    debug: bool = True
+    MONGODB_URI: str
+    DATABASE_NAME: str = "papermind"
 
-    # ── Database ──────────────────────────────────
-    database_url: str = "postgresql://postgres:password@localhost:5432/papermind"
+    JWT_SECRET: str
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
-    # ── Authentication (future) ──────────────────
-    jwt_secret: str = "change-this-to-a-secure-random-string"
-    jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
-    # ── File Storage ─────────────────────────────
-    upload_dir: str = "./uploads"
+    UPLOAD_DIRECTORY: str = "uploads"
 
-    # ── AI / NLP (future) ────────────────────────
-    ai_model_name: str = "bert-base-uncased"
-
-    # ── CORS ─────────────────────────────────────
-    frontend_url: str = "http://localhost:5173"
+    # SMTP Configuration
+    SMTP_EMAIL: str
+    SMTP_APP_PASSWORD: str
+    SMTP_SERVER: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        extra="ignore",
+        case_sensitive=True,
     )
 
 
-# Cached singleton so .env is only read once per process
-_settings: Settings | None = None
-
-
-def get_settings() -> Settings:
-    """Return the application settings singleton."""
-    global _settings
-    if _settings is None:
-        _settings = Settings()
-    return _settings
+# Singleton settings instance — import this wherever config is needed.
+settings = Settings()

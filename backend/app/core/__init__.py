@@ -1,1 +1,1 @@
-# PaperMind AI — Core Package
+# core package

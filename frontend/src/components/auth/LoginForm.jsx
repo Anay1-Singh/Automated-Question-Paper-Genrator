@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, ArrowRight } from 'lucide-react'
+import { Mail, ArrowRight, FlaskConical, ShieldCheck, GraduationCap } from 'lucide-react'
 import AuthInput from './AuthInput'
 import PasswordInput from './PasswordInput'
 import SocialButton from './SocialButton'
 import { api } from '../../utils/api'
+
+const isDev = import.meta.env.MODE === 'development'
 
 export default function LoginForm() {
   const navigate = useNavigate()
@@ -45,12 +47,31 @@ export default function LoginForm() {
     try {
       const data = await api.post('/auth/login', { email, password })
       localStorage.setItem('token', data.access_token)
-      navigate('/dashboard')
+      localStorage.setItem('user', JSON.stringify(data.user))
+      localStorage.setItem('role', data.user.role || 'student')
+
+      const role = data.user.role || 'student'
+      navigate(role === 'admin' ? '/dashboard/admin' : '/dashboard/student')
     } catch (err) {
       setFormError(err.message || 'Invalid credentials or connection error.')
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleDevLogin = (role) => {
+    const mockUser = {
+      id: `dev-${role}-id`,
+      name: role === 'admin' ? 'Dev Admin' : 'Dev Student',
+      email: `${role}@dev.local`,
+      role,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    localStorage.setItem('token', `dev-${role}-token`)
+    localStorage.setItem('user', JSON.stringify(mockUser))
+    localStorage.setItem('role', role)
+    navigate(role === 'admin' ? '/dashboard/admin' : '/dashboard/student')
   }
 
   return (
@@ -133,6 +154,34 @@ export default function LoginForm() {
         {isSubmitting ? 'Verifying...' : 'Sign In'}
         {!isSubmitting && <ArrowRight className="w-4 h-4" />}
       </button>
+
+      {/* Dev Quick Login (visible only in development) */}
+      {isDev && (
+        <div className="flex flex-col gap-2.5 p-3 rounded-xl border border-amber-500/20 bg-amber-500/5">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-amber-400 uppercase tracking-widest">
+            <FlaskConical className="w-3.5 h-3.5" />
+            Dev Quick Login
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleDevLogin('admin')}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-[11px] font-bold bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/25 transition-all duration-200"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Login as Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDevLogin('student')}
+              className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-[11px] font-bold bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-all duration-200"
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              Login as Student
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Divider */}
       <div className="relative flex items-center justify-center my-1.5">

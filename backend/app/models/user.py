@@ -1,24 +1,60 @@
-import datetime
-from sqlalchemy import Integer, String, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column
+"""
+PaperMind AI - User Document Model
 
-from app.database.base import Base
+Defines the MongoDB document structure for the ``users`` collection
+and provides helper functions for serialising documents to API responses.
+"""
+
+from datetime import datetime, timezone
 
 
-class User(Base):
+def create_user_document(
+    name: str,
+    email: str,
+    hashed_password: str,
+    role: str = "student",
+) -> dict:
     """
-    User database model representing registered academics.
-    """
-    __tablename__ = "users"
+    Build a user document ready for insertion into MongoDB.
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    name: Mapped[str] = mapped_column(String, nullable=False)
-    email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String, nullable=False)
-    role: Mapped[str] = mapped_column(String, default="Professor", nullable=False)
-    university: Mapped[str] = mapped_column(String, default="Delhi Technological University", nullable=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=func.now(),
-        nullable=False
-    )
+    Args:
+        name: The user's display name.
+        email: The user's email address (will be stored lowercase).
+        hashed_password: The bcrypt-hashed password.
+        role: The user's role (admin or student).
+
+    Returns:
+        A dictionary matching the ``users`` collection schema.
+    """
+    now = datetime.now(timezone.utc)
+
+    return {
+        "name": name.strip(),
+        "email": email.lower().strip(),
+        "password": hashed_password,
+        "role": role,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+
+def user_document_to_response(user: dict) -> dict:
+    """
+    Convert a raw MongoDB user document into a safe response dictionary.
+
+    Strips the hashed password and converts ``_id`` to a string.
+
+    Args:
+        user: The raw document from MongoDB.
+
+    Returns:
+        A sanitised dictionary safe for API responses.
+    """
+    return {
+        "id": str(user["_id"]),
+        "name": user["name"],
+        "email": user["email"],
+        "role": user.get("role", "student"),
+        "created_at": user["created_at"].isoformat(),
+        "updated_at": user["updated_at"].isoformat(),
+    }
