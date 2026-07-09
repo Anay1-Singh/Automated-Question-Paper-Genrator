@@ -77,7 +77,7 @@ export default function HowItWorks() {
           {/* Horizontal Connector Line for Desktop */}
           <div className="hidden lg:block absolute top-[44px] left-[10%] right-[10%] h-[2px] bg-gradient-to-r from-blue-500/20 via-blue-500 to-indigo-500/20 z-0" />
 
-          {steps.map((step, idx) => {
+          {steps.map((step) => {
             const Icon = step.icon
             return (
               <motion.div

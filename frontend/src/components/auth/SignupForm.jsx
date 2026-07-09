@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Mail, User, ArrowRight, GraduationCap, ShieldCheck } from 'lucide-react'
 import AuthInput from './AuthInput'
 import PasswordInput from './PasswordInput'
-import SocialButton from './SocialButton'
 import { api } from '../../utils/api'
 
 export default function SignupForm() {
@@ -12,7 +11,7 @@ export default function SignupForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [role, setRole] = useState('student')
+  const [role, setRole] = useState('teacher')
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState('')
@@ -101,7 +100,7 @@ export default function SignupForm() {
           label="Full Name"
           id="signup-name"
           icon={User}
-          placeholder="Professor Alexander"
+          placeholder="Full name"
           value={fullName}
           onChange={(e) => {
             setFullName(e.target.value)
@@ -118,6 +117,19 @@ export default function SignupForm() {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
+              onClick={() => setRole('teacher')}
+              disabled={isSubmitting}
+              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all duration-200 ${
+                role === 'teacher'
+                  ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-lg shadow-indigo-900/10'
+                  : 'bg-[#09090B] border-[#27272A] text-zinc-400 hover:border-zinc-600 hover:text-zinc-300'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Teacher
+            </button>
+            <button
+              type="button"
               onClick={() => setRole('student')}
               disabled={isSubmitting}
               className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all duration-200 ${
@@ -128,19 +140,6 @@ export default function SignupForm() {
             >
               <GraduationCap className="w-4 h-4" />
               Student
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('admin')}
-              disabled={isSubmitting}
-              className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-bold border transition-all duration-200 ${
-                role === 'admin'
-                  ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-lg shadow-indigo-900/10'
-                  : 'bg-[#09090B] border-[#27272A] text-zinc-400 hover:border-zinc-600 hover:text-zinc-300'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Admin (Teacher)
             </button>
           </div>
         </div>
@@ -235,19 +234,6 @@ export default function SignupForm() {
         {isSubmitting ? 'Creating Account...' : 'Get Started'}
         {!isSubmitting && <ArrowRight className="w-4 h-4" />}
       </button>
-
-      {/* Divider */}
-      <div className="relative flex items-center justify-center my-1">
-        <div className="absolute inset-x-0 h-px bg-[#27272A]/70" />
-        <span className="relative bg-[#18181B] px-3.5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-          or continue with
-        </span>
-      </div>
-
-      {/* Social OAuth Buttons */}
-      <SocialButton disabled={isSubmitting}>
-        Google Workspaces
-      </SocialButton>
 
       {/* Login Redirection footer */}
       <p className="text-center text-xs text-zinc-400 mt-2 font-medium">

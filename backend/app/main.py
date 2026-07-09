@@ -14,12 +14,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.ai import router as ai_router
 from app.api.auth import router as auth_router
 from app.api.documents import router as documents_router
+from app.api.papers import router as papers_router
 from app.core.config import settings
 from app.database.mongodb import close_mongo, connect_to_mongo, get_database
 from app.services.auth_service import ensure_indexes
 from app.services.document_service import ensure_document_indexes
+from app.services.paper_service import ensure_paper_indexes
 
 # =====================================================
 # Logging
@@ -52,6 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Create required database indexes (idempotent).
     await ensure_indexes(get_database())
     await ensure_document_indexes(get_database())
+    await ensure_paper_indexes(get_database())
 
     logger.info("PaperMind AI Backend is ready.")
 
@@ -87,6 +91,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 
@@ -96,6 +101,8 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(documents_router, prefix="/api/documents")
+app.include_router(ai_router, prefix="/api/ai")
+app.include_router(papers_router, prefix="/api/papers")
 
 
 # =====================================================

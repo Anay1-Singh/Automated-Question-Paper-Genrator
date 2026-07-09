@@ -11,3 +11,5 @@ email-validator
 python-multipart
 pymupdf
 python-docx
+google-genai
+reportlab

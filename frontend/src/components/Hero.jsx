@@ -82,11 +82,11 @@ export default function Hero() {
               <ArrowRight className="w-4 h-4" />
             </Link>
             <a
-              href="#demo"
+              href="#features"
               className="inline-flex items-center justify-center gap-2.5 text-sm font-semibold text-white border border-[#27272A] hover:bg-[#18181B] px-6 py-3.5 rounded-lg transition-colors duration-200"
             >
               <Play className="w-4 h-4 text-blue-500 fill-blue-500" />
-              Watch Demo
+              Explore Features
             </a>
           </motion.div>
 
@@ -140,10 +140,10 @@ export default function Hero() {
                 {/* File Upload Widget */}
                 <div className="bg-[#09090B] border border-[#27272A] rounded-lg p-4 flex flex-col items-center justify-center text-center relative overflow-hidden group">
                   <UploadCloud className="w-8 h-8 text-blue-500 mb-2.5" />
-                  <span className="text-xs font-semibold text-white">Syllabus_Unit_3.pdf</span>
-                  <span className="text-[10px] text-zinc-500 mt-0.5">Size: 4.2 MB</span>
+                  <span className="text-xs font-semibold text-white">Uploaded material</span>
+                  <span className="text-[10px] text-zinc-500 mt-0.5">Processing metadata</span>
 
-                  {/* Simulated Uploading/Completed Progress bar */}
+                  {/* Animated processing progress bar */}
                   <div className="w-full bg-[#27272A] h-1.5 rounded-full overflow-hidden mt-3.5">
                     <motion.div
                       initial={{ width: '0%' }}

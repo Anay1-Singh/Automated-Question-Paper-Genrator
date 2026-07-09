@@ -43,7 +43,7 @@ export default function CTA() {
               href="#contact-sales"
               className="inline-flex items-center justify-center gap-2.5 text-sm font-semibold text-white border border-[#27272A] hover:bg-[#18181B] px-6 py-3.5 rounded-lg transition-colors duration-200"
             >
-              Request Department Demo
+              Request Department Access
             </a>
           </div>
 

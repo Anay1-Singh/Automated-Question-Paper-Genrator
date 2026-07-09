@@ -20,7 +20,11 @@ class Settings(BaseSettings):
         ACCESS_TOKEN_EXPIRE_MINUTES: Token expiry duration in minutes.
         CORS_ORIGINS: Comma-separated list of allowed CORS origins.
         UPLOAD_DIRECTORY: Directory path for storing uploaded files.
+        GEMINI_API_KEY: Google Gemini API key used by centralized AI services.
+        GEMINI_MODEL: Gemini model name used for document intelligence.
     """
+
+    ENVIRONMENT: str = "development"
 
     MONGODB_URI: str
     DATABASE_NAME: str = "papermind"
@@ -32,6 +36,9 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:5173"]
 
     UPLOAD_DIRECTORY: str = "uploads"
+
+    GEMINI_API_KEY: str | None = None
+    GEMINI_MODEL: str = "gemini-2.5-flash"
 
     # SMTP Configuration
     SMTP_EMAIL: str

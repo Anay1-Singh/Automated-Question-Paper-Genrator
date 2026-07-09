@@ -14,11 +14,11 @@ function readStoredUser() {
   }
 }
 
-export default function StudentSettings({ user: userProp }) {
+export default function TeacherSettings({ user: userProp }) {
   const user = userProp || readStoredUser()
-  const displayName = user?.name || 'Signed in student'
+  const displayName = user?.name || 'Signed in teacher'
   const displayEmail = user?.email || 'Email unavailable'
-  const displayRole = user?.role || 'student'
+  const displayRole = user?.role || 'teacher'
   const initials = displayName
     .split(' ')
     .map((part) => part[0])
@@ -36,13 +36,13 @@ export default function StudentSettings({ user: userProp }) {
       <section className="rounded-2xl border border-[#1a1a2e] bg-[#0f0f14] p-5">
         <h3 className="mb-4 text-sm font-bold">Profile</h3>
         <div className="flex flex-col items-start gap-5 sm:flex-row">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-2xl font-black text-white shadow-lg shadow-emerald-900/30">
-            {initials || 'S'}
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-2xl font-black text-white shadow-lg shadow-indigo-900/30">
+            {initials || 'T'}
           </div>
           <div className="w-full flex-1 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <h4 className="text-sm font-bold text-white">{displayName}</h4>
-              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+              <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-400">
                 {displayRole}
               </span>
             </div>
@@ -52,7 +52,7 @@ export default function StudentSettings({ user: userProp }) {
             </div>
             <div className="flex items-center gap-2 text-xs text-zinc-500">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Study data is loaded from MongoDB for this authenticated user.
+              Workspace data is loaded from MongoDB for this authenticated user.
             </div>
           </div>
         </div>
@@ -60,7 +60,7 @@ export default function StudentSettings({ user: userProp }) {
 
       <section className="rounded-2xl border border-[#1a1a2e] bg-[#0f0f14] p-5">
         <div className="mb-3 flex items-center gap-2">
-          <Lock className="h-4 w-4 text-emerald-400" />
+          <Lock className="h-4 w-4 text-indigo-400" />
           <h3 className="text-sm font-bold">Account Management</h3>
         </div>
         <div className="flex items-start gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-100">

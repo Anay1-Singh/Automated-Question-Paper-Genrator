@@ -13,7 +13,7 @@ def create_otp_document(
     email: str,
     hashed_password: str,
     otp: str,
-    role: str = "student",
+    role: str = "teacher",
 ) -> dict:
     """
     Build an OTP verification document ready for insertion into MongoDB.
@@ -23,7 +23,7 @@ def create_otp_document(
         email: The email address (will be stored lowercase).
         hashed_password: The bcrypt-hashed password (unverified stage).
         otp: The 6-digit OTP code string.
-        role: The user's role (admin or student).
+        role: The user's public signup role (teacher or student).
 
     Returns:
         A dictionary matching the ``otp_verifications`` collection schema.

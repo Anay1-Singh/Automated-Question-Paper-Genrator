@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -14,12 +14,15 @@ import {
   TrendingUp,
   Sparkles,
   ChevronRight,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
 import UploadNotes from '../components/student/UploadNotes'
 import MySummaries from '../components/student/MySummaries'
 import ImportantTopics from '../components/student/ImportantTopics'
 import StudyFocus from '../components/student/StudyFocus'
 import StudentSettings from '../components/student/StudentSettings'
+import { api } from '../utils/api'
 
 const sidebarItems = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -30,19 +33,76 @@ const sidebarItems = [
   { key: 'settings', label: 'Settings', icon: Settings },
 ]
 
-const statsData = [
-  { label: 'Notes Uploaded', value: '0', icon: Upload, color: 'emerald' },
-  { label: 'Summaries Created', value: '0', icon: FileText, color: 'teal' },
-  { label: 'Topics Bookmarked', value: '0', icon: Star, color: 'cyan' },
-  { label: 'Study Hours', value: '0', icon: Target, color: 'green' },
-]
+function formatDate(value) {
+  if (!value) return 'Recently'
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(new Date(value))
+}
 
 export default function StudentDashboard() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('overview')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [documents, setDocuments] = useState([])
+  const [documentsLoading, setDocumentsLoading] = useState(true)
+  const [documentsError, setDocumentsError] = useState('')
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+  const fetchDocuments = async ({ silent = false } = {}) => {
+    if (!silent) {
+      setDocumentsLoading(true)
+      setDocumentsError('')
+    }
+
+    try {
+      const data = await api.get('/documents')
+      setDocuments(data)
+    } catch (error) {
+      setDocumentsError(error.message || 'Unable to load your workspace data.')
+    } finally {
+      setDocumentsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      fetchDocuments()
+    }, 0)
+
+    return () => window.clearTimeout(timerId)
+  }, [])
+
+  const processedDocuments = useMemo(
+    () => documents.filter((document) => ['processed', 'ready'].includes(document.status)),
+    [documents],
+  )
+
+  const uniqueTopics = useMemo(
+    () => new Set(processedDocuments.flatMap((document) => document.topics || [])).size,
+    [processedDocuments],
+  )
+
+  const statsData = useMemo(
+    () => [
+      { label: 'Notes Uploaded', value: String(documents.length), icon: Upload, color: 'emerald' },
+      { label: 'Summaries Created', value: String(processedDocuments.filter((document) => document.summary).length), icon: FileText, color: 'teal' },
+      { label: 'Important Topics', value: String(uniqueTopics), icon: Star, color: 'cyan' },
+      { label: 'Processed Notes', value: String(processedDocuments.length), icon: Target, color: 'green' },
+    ],
+    [documents.length, processedDocuments, uniqueTopics],
+  )
+
+  const recentActivity = useMemo(
+    () => documents
+      .slice()
+      .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))
+      .slice(0, 5),
+    [documents],
+  )
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -170,7 +230,10 @@ export default function StudentDashboard() {
                   </h1>
                   <p className="text-xs text-zinc-500 mt-1">Your personal study companion powered by AI.</p>
                 </div>
-                <button className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-900/20 transition-all duration-200 hover:-translate-y-0.5 shrink-0">
+                <button
+                  onClick={() => setActiveTab('upload-notes')}
+                  className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-emerald-900/20 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
+                >
                   <Sparkles className="w-3.5 h-3.5" />
                   Upload Notes
                 </button>
@@ -232,25 +295,80 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
-              {/* Empty study activity */}
               <div className="p-5 rounded-2xl bg-[#0f0f14] border border-[#1a1a2e]">
                 <h3 className="text-sm font-bold mb-4">Study Activity</h3>
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
-                    <BookOpen className="w-5 h-5 text-emerald-400/50" />
+                {documentsLoading ? (
+                  <div className="flex items-center justify-center gap-2 py-12 text-xs font-semibold text-zinc-500">
+                    <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
+                    Loading activity...
                   </div>
-                  <p className="text-xs font-semibold text-zinc-500">No study activity yet</p>
-                  <p className="text-[10px] text-zinc-600 mt-1">Upload your notes to get started with AI summaries and study tools.</p>
-                </div>
+                ) : documentsError ? (
+                  <div className="flex items-start gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-300">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    {documentsError}
+                  </div>
+                ) : recentActivity.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentActivity.map((document) => (
+                      <div key={document.id} className="flex items-center gap-3 rounded-xl border border-[#202033] bg-[#09090B] p-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-emerald-500/20 bg-emerald-500/10">
+                          <BookOpen className="h-4 w-4 text-emerald-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs font-bold text-white">{document.title}</p>
+                          <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
+                            {document.status} - {formatDate(document.updated_at || document.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-3">
+                      <BookOpen className="w-5 h-5 text-emerald-400/50" />
+                    </div>
+                    <p className="text-xs font-semibold text-zinc-500">No study activity yet</p>
+                    <p className="text-[10px] text-zinc-600 mt-1">Upload your notes to generate summaries, topics, and study focus.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {activeTab === 'upload-notes' && <UploadNotes />}
-          {activeTab === 'summaries' && <MySummaries />}
-          {activeTab === 'important-topics' && <ImportantTopics />}
-          {activeTab === 'study-focus' && <StudyFocus />}
-          {activeTab === 'settings' && <StudentSettings />}
+          {activeTab === 'upload-notes' && (
+            <UploadNotes
+              documents={documents}
+              documentsLoading={documentsLoading}
+              onDocumentsChange={setDocuments}
+              onRefreshDocuments={fetchDocuments}
+            />
+          )}
+          {activeTab === 'summaries' && (
+            <MySummaries
+              documents={documents}
+              loading={documentsLoading}
+              error={documentsError}
+              onUploadClick={() => setActiveTab('upload-notes')}
+            />
+          )}
+          {activeTab === 'important-topics' && (
+            <ImportantTopics
+              documents={documents}
+              loading={documentsLoading}
+              error={documentsError}
+              onUploadClick={() => setActiveTab('upload-notes')}
+            />
+          )}
+          {activeTab === 'study-focus' && (
+            <StudyFocus
+              documents={documents}
+              loading={documentsLoading}
+              error={documentsError}
+              onUploadClick={() => setActiveTab('upload-notes')}
+            />
+          )}
+          {activeTab === 'settings' && <StudentSettings user={user} />}
         </div>
       </main>
     </div>

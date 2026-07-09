@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { Check, HelpCircle } from 'lucide-react'
 
 export default function Pricing() {

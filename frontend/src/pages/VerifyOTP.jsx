@@ -4,11 +4,17 @@ import { KeyRound, ArrowRight, RefreshCw, Mail } from 'lucide-react'
 import AuthLayout from '../components/auth/AuthLayout'
 import { api } from '../utils/api'
 
+function getDashboardPath(role) {
+  if (role === 'teacher') return '/dashboard/teacher'
+  if (role === 'admin') return '/dashboard/admin'
+  return '/dashboard/student'
+}
+
 export default function VerifyOTP() {
   const navigate = useNavigate()
   
   // Retrieve email from sessionStorage
-  const [email, setEmail] = useState('')
+  const [email] = useState(() => sessionStorage.getItem('signup_email') || '')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
@@ -30,14 +36,11 @@ export default function VerifyOTP() {
   ]
 
   useEffect(() => {
-    const storedEmail = sessionStorage.getItem('signup_email')
-    if (!storedEmail) {
+    if (!email) {
       // If no pending email, send them back to signup
       navigate('/signup')
-      return
     }
-    setEmail(storedEmail)
-  }, [navigate])
+  }, [email, navigate])
 
   // Countdowns
   useEffect(() => {
@@ -141,7 +144,7 @@ export default function VerifyOTP() {
       localStorage.setItem('role', data.user.role || 'student')
       // Redirect to role-based dashboard
       const role = data.user.role || 'student'
-      navigate(role === 'admin' ? '/dashboard/admin' : '/dashboard/student')
+      navigate(getDashboardPath(role))
     } catch (err) {
       setError(err.message || 'Verification failed. Please check the code and try again.')
     } finally {

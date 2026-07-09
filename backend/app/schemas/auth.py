@@ -36,9 +36,9 @@ class SignupRequest(BaseModel):
         examples=["SecureP@ss1"],
     )
     role: str = Field(
-        default="student",
-        description="User's role (admin or student).",
-        examples=["student", "admin"],
+        default="teacher",
+        description="Public signup role. System admin accounts must be created manually.",
+        examples=["teacher", "student"],
     )
 
 
@@ -124,4 +124,3 @@ class MessageResponse(BaseModel):
     """Generic message response schema."""
 
     message: str = Field(..., description="Details of the operation result.")
-

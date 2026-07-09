@@ -6,9 +6,11 @@ retrieval, and deletion.
 """
 
 import asyncio
+from datetime import datetime, timezone
 import logging
 import os
 from pathlib import Path
+import re
 from uuid import uuid4
 
 import fitz
@@ -19,10 +21,12 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.config import settings
 from app.models.document import create_document_record, document_to_response
+from app.services.document_processing_service import process_document
 
 logger = logging.getLogger(__name__)
 
 DOCUMENTS_COLLECTION = "documents"
+PAPERS_COLLECTION = "papers"
 MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024
 CHUNK_SIZE_BYTES = 1024 * 1024
 
@@ -57,6 +61,7 @@ async def upload_document(
     """
     Validate, store, extract, and persist an uploaded document.
     """
+    logger.info("Upload Started")
     cleaned_title = title.strip()
     if not cleaned_title:
         raise HTTPException(
@@ -73,10 +78,6 @@ async def upload_document(
     upload_path = file_path.as_posix()
 
     file_size = await _save_upload_file(file=file, destination=file_path)
-    extracted_text, page_count, word_count, document_status = await _extract_text(
-        file_path=file_path,
-        file_type=file_type,
-    )
 
     document_record = create_document_record(
         user_id=current_user["id"],
@@ -88,10 +89,10 @@ async def upload_document(
         upload_path=upload_path,
         subject=subject,
         description=description,
-        extracted_text=extracted_text,
-        page_count=page_count,
-        word_count=word_count,
-        status=document_status,
+        extracted_text="",
+        page_count=0,
+        word_count=0,
+        status="uploading",
     )
 
     try:
@@ -105,21 +106,92 @@ async def upload_document(
         )
 
     document_record["_id"] = result.inserted_id
-    return document_to_response(document_record)
+
+    try:
+        await _update_document_fields(
+            db,
+            result.inserted_id,
+            {"status": "extracting", "updated_at": _utc_now()},
+        )
+
+        extracted_text, page_count, word_count = await _extract_text(
+            file_path=file_path,
+            file_type=file_type,
+        )
+        logger.info("Extraction Complete")
+
+        await _update_document_fields(
+            db,
+            result.inserted_id,
+            {
+                "extracted_text": extracted_text,
+                "page_count": page_count,
+                "word_count": word_count,
+                "status": "processing",
+                "processing_error": None,
+                "updated_at": _utc_now(),
+            },
+        )
+
+        processed_data = await process_document(
+            extracted_text=extracted_text,
+            page_count=page_count,
+        )
+
+        await _update_document_fields(
+            db,
+            result.inserted_id,
+            {
+                **processed_data,
+                "status": "processed",
+                "processing_error": None,
+                "updated_at": _utc_now(),
+            },
+        )
+
+        processed_document = await db[DOCUMENTS_COLLECTION].find_one({"_id": result.inserted_id})
+        return document_to_response(processed_document)
+    except Exception as exc:
+        logger.exception("Document processing failed for %s: %s", result.inserted_id, exc)
+        await _update_document_fields(
+            db,
+            result.inserted_id,
+            {
+                "status": "failed",
+                "processing_error": str(exc) or "Document processing failed.",
+                "updated_at": _utc_now(),
+            },
+        )
+        failed_document = await db[DOCUMENTS_COLLECTION].find_one({"_id": result.inserted_id})
+        return document_to_response(failed_document)
 
 
 async def list_documents(
     *,
     db: AsyncIOMotorDatabase,
     current_user: dict,
+    search: str | None = None,
+    skip: int = 0,
+    limit: int = 100,
 ) -> list[dict]:
     """
     Return all documents owned by the current user, newest first.
     """
+    query: dict = {"user_id": current_user["id"]}
+    if search:
+        escaped = re.escape(search.strip())
+        query["$or"] = [
+            {"title": {"$regex": escaped, "$options": "i"}},
+            {"subject": {"$regex": escaped, "$options": "i"}},
+            {"original_filename": {"$regex": escaped, "$options": "i"}},
+        ]
+
     cursor = (
         db[DOCUMENTS_COLLECTION]
-        .find({"user_id": current_user["id"]})
+        .find(query)
         .sort("created_at", -1)
+        .skip(max(0, skip))
+        .limit(max(1, min(limit, 200)))
     )
     documents = await cursor.to_list(length=None)
     return [document_to_response(document) for document in documents]
@@ -139,6 +211,70 @@ async def get_document(
     return document_to_response(document)
 
 
+async def get_document_summary(
+    *,
+    db: AsyncIOMotorDatabase,
+    current_user: dict,
+    document_id: str,
+) -> dict:
+    """
+    Return only summary data for an owned document.
+    """
+    document = await get_document(db=db, current_user=current_user, document_id=document_id)
+    return {
+        "id": document["id"],
+        "title": document["title"],
+        "status": document["status"],
+        "summary": document["summary"],
+    }
+
+
+async def get_document_topics(
+    *,
+    db: AsyncIOMotorDatabase,
+    current_user: dict,
+    document_id: str,
+) -> dict:
+    """
+    Return topics and keywords for an owned document.
+    """
+    document = await get_document(db=db, current_user=current_user, document_id=document_id)
+    return {
+        "id": document["id"],
+        "title": document["title"],
+        "status": document["status"],
+        "topics": document["topics"],
+        "keywords": document["keywords"],
+    }
+
+
+async def get_document_statistics(
+    *,
+    db: AsyncIOMotorDatabase,
+    current_user: dict,
+    document_id: str,
+) -> dict:
+    """
+    Return processing and reading statistics for an owned document.
+    """
+    document = await get_document(db=db, current_user=current_user, document_id=document_id)
+    return {
+        "id": document["id"],
+        "title": document["title"],
+        "status": document["status"],
+        "file_type": document["file_type"],
+        "file_size": document["file_size"],
+        "page_count": document["page_count"],
+        "word_count": document["word_count"],
+        "character_count": document["character_count"],
+        "reading_time_minutes": document["reading_time_minutes"],
+        "language": document["language"],
+        "paragraph_count": document["paragraph_count"],
+        "sentence_count": document["sentence_count"],
+        "chunk_count": document["chunk_count"],
+    }
+
+
 async def delete_document(
     *,
     db: AsyncIOMotorDatabase,
@@ -151,6 +287,12 @@ async def delete_document(
     document = await _get_document_or_404(db, document_id)
     _assert_document_owner(document, current_user)
 
+    await db[PAPERS_COLLECTION].delete_many(
+        {
+            "teacher_id": current_user["id"],
+            "document_id": document_id,
+        }
+    )
     await db[DOCUMENTS_COLLECTION].delete_one({"_id": document["_id"]})
 
     upload_path = document.get("upload_path")
@@ -231,9 +373,9 @@ async def _save_upload_file(*, file: UploadFile, destination: Path) -> int:
     return total_size
 
 
-async def _extract_text(*, file_path: Path, file_type: str) -> tuple[str, int, int, str]:
+async def _extract_text(*, file_path: Path, file_type: str) -> tuple[str, int, int]:
     """
-    Extract raw text and metadata. Extraction failures do not block upload.
+    Extract raw text and metadata.
     """
     try:
         text, page_count = await asyncio.to_thread(
@@ -242,10 +384,10 @@ async def _extract_text(*, file_path: Path, file_type: str) -> tuple[str, int, i
             file_type,
         )
         word_count = len(text.split())
-        return text, page_count, word_count, "uploaded"
+        return text, page_count, word_count
     except Exception as exc:
         logger.exception("Text extraction failed for %s: %s", file_path, exc)
-        return "", 0, 0, "failed"
+        raise RuntimeError("Text extraction failed.") from exc
 
 
 def _extract_text_sync(file_path: Path, file_type: str) -> tuple[str, int]:
@@ -312,3 +454,21 @@ def _delete_file_if_exists(file_path: Path) -> None:
             os.remove(file_path)
     except Exception as exc:
         logger.warning("Could not delete upload file %s: %s", file_path, exc)
+
+
+async def _update_document_fields(
+    db: AsyncIOMotorDatabase,
+    document_id: ObjectId,
+    fields: dict,
+) -> None:
+    """
+    Update a document record by ObjectId.
+    """
+    await db[DOCUMENTS_COLLECTION].update_one(
+        {"_id": document_id},
+        {"$set": fields},
+    )
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)

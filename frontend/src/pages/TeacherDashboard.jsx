@@ -26,16 +26,18 @@ import {
   CalendarDays,
   HardDrive,
   Type,
+  Clock,
+  Languages,
 } from 'lucide-react'
 import { api, API_BASE_URL } from '../utils/api'
-import GeneratePaper from '../components/admin/GeneratePaper'
-import QuestionBank from '../components/admin/QuestionBank'
-import HistorySection from '../components/admin/History'
-import Analytics from '../components/admin/Analytics'
-import AdminSettings from '../components/admin/Settings'
+import GeneratePaper from '../components/teacher/GeneratePaper'
+import QuestionBank from '../components/teacher/QuestionBank'
+import HistorySection from '../components/teacher/History'
+import Analytics from '../components/teacher/Analytics'
+import TeacherSettings from '../components/teacher/Settings'
+import PaperPreview from '../components/teacher/PaperPreview'
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024
-const DEV_DOCUMENTS_KEY = 'papermind_dev_documents'
 
 const sidebarItems = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -66,14 +68,13 @@ const fileTypeConfig = {
 }
 
 const statusConfig = {
+  uploading: 'text-zinc-300 bg-zinc-500/10 border-zinc-500/20',
+  extracting: 'text-blue-300 bg-blue-500/10 border-blue-500/20',
   uploaded: 'text-sky-300 bg-sky-500/10 border-sky-500/20',
   processing: 'text-amber-300 bg-amber-500/10 border-amber-500/20',
+  processed: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20',
   ready: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20',
   failed: 'text-red-300 bg-red-500/10 border-red-500/20',
-}
-
-function isDevBypassToken(token) {
-  return import.meta.env.MODE === 'development' && /^dev-(admin|student)-token$/.test(token || '')
 }
 
 function getFileType(filename = '') {
@@ -104,16 +105,13 @@ function formatWords(count = 0) {
   return `${new Intl.NumberFormat('en-US').format(count)} words`
 }
 
-function getStoredDevDocuments() {
-  try {
-    return JSON.parse(localStorage.getItem(DEV_DOCUMENTS_KEY) || '[]')
-  } catch {
-    return []
-  }
+function formatReadingTime(minutes = 0) {
+  if (!minutes) return '0 min read'
+  return `${minutes} min read`
 }
 
-function saveStoredDevDocuments(documents) {
-  localStorage.setItem(DEV_DOCUMENTS_KEY, JSON.stringify(documents))
+function formatLanguage(language = 'en') {
+  return language === 'hi' ? 'Hindi' : 'English'
 }
 
 function getApiErrorMessage(error) {
@@ -183,32 +181,50 @@ function DocumentCard({ document, onDelete, deletingId }) {
         </button>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-2 text-xs text-zinc-500 sm:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-2 text-xs text-zinc-500 sm:grid-cols-2 xl:grid-cols-3">
         <div className="flex items-center gap-2">
           <CalendarDays className="h-3.5 w-3.5 text-zinc-600" />
           {formatDate(document.created_at)}
         </div>
         <div className="flex items-center gap-2">
-          <HardDrive className="h-3.5 w-3.5 text-zinc-600" />
-          {formatFileSize(document.file_size)}
+          <BookOpen className="h-3.5 w-3.5 text-zinc-600" />
+          {document.page_count || 0} pages
         </div>
         <div className="flex items-center gap-2">
           <Type className="h-3.5 w-3.5 text-zinc-600" />
           {formatWords(document.word_count)}
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5 text-zinc-600" />
+          {formatReadingTime(document.reading_time_minutes)}
+        </div>
+        <div className="flex items-center gap-2">
+          <Languages className="h-3.5 w-3.5 text-zinc-600" />
+          {formatLanguage(document.language)}
+        </div>
+        <div className="flex items-center gap-2">
+          <HardDrive className="h-3.5 w-3.5 text-zinc-600" />
+          {formatFileSize(document.file_size)}
         </div>
       </div>
     </article>
   )
 }
 
-export default function AdminDashboard() {
+export default function TeacherDashboard() {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [documents, setDocuments] = useState([])
+  const [papers, setPapers] = useState([])
   const [documentsLoading, setDocumentsLoading] = useState(true)
+  const [papersLoading, setPapersLoading] = useState(true)
   const [documentsError, setDocumentsError] = useState('')
+  const [papersError, setPapersError] = useState('')
+  const [paperToEdit, setPaperToEdit] = useState(null)
+  const [previewPaper, setPreviewPaper] = useState(null)
+  const [previewMode, setPreviewMode] = useState('paper')
   const [selectedFile, setSelectedFile] = useState(null)
   const [title, setTitle] = useState('')
   const [subject, setSubject] = useState('')
@@ -222,18 +238,11 @@ export default function AdminDashboard() {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const token = localStorage.getItem('token')
-  const isDevSession = isDevBypassToken(token)
 
   const fetchDocuments = async ({ silent = false } = {}) => {
     if (!silent) {
       setDocumentsLoading(true)
       setDocumentsError('')
-    }
-
-    if (isDevSession) {
-      setDocuments(getStoredDevDocuments())
-      setDocumentsLoading(false)
-      return
     }
 
     try {
@@ -246,26 +255,126 @@ export default function AdminDashboard() {
     }
   }
 
+  const fetchPapers = async ({ silent = false } = {}) => {
+    if (!silent) {
+      setPapersLoading(true)
+      setPapersError('')
+    }
+
+    try {
+      const data = await api.get('/papers')
+      setPapers(data)
+    } catch (error) {
+      setPapersError(error.message || 'Unable to load generated papers.')
+    } finally {
+      setPapersLoading(false)
+    }
+  }
+
   useEffect(() => {
     const timerId = window.setTimeout(() => {
       fetchDocuments()
+      fetchPapers()
     }, 0)
 
     return () => window.clearTimeout(timerId)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const recentDocuments = useMemo(() => documents.slice(0, 5), [documents])
+  const recentActivity = useMemo(() => {
+    const uploads = documents.map((document) => ({
+      id: `doc-${document.id}`,
+      type: 'document',
+      title: document.title,
+      fileType: document.file_type,
+      createdAt: document.created_at,
+    }))
+    const generated = papers.map((paper) => ({
+      id: `paper-${paper.id}`,
+      type: 'paper',
+      title: paper.title,
+      fileType: 'paper',
+      createdAt: paper.generated_at || paper.created_at,
+      questionCount: paper.questions?.length || paper.total_questions || 0,
+    }))
+    return [...uploads, ...generated]
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+      .slice(0, 5)
+  }, [documents, papers])
+
+  const paperStats = useMemo(() => {
+    const questionsGenerated = papers.reduce(
+      (total, paper) => total + (paper.questions?.length || paper.total_questions || 0),
+      0,
+    )
+    return {
+      generatedPapers: papers.length,
+      questionsGenerated,
+      questionBank: questionsGenerated,
+    }
+  }, [papers])
 
   const statsData = useMemo(
     () => [
-      { label: 'Papers Generated', value: '0', icon: FileCheck, color: 'indigo' },
-      { label: 'Questions Saved', value: '0', icon: BookOpen, color: 'blue' },
+      { label: 'Generated Papers', value: String(paperStats.generatedPapers), icon: FileCheck, color: 'indigo' },
+      { label: 'Questions Generated', value: String(paperStats.questionsGenerated), icon: BookOpen, color: 'blue' },
       { label: 'Documents Uploaded', value: String(documents.length), icon: Upload, color: 'violet' },
-      { label: 'Students', value: '0', icon: Users, color: 'sky' },
+      { label: 'Question Bank', value: String(paperStats.questionBank), icon: Users, color: 'sky' },
     ],
-    [documents.length],
+    [documents.length, paperStats],
   )
+
+  const handlePaperGenerated = (paper) => {
+    setPapers((current) => [paper, ...current.filter((item) => item.id !== paper.id)])
+    setPaperToEdit(paper)
+    setPreviewPaper(paper)
+  }
+
+  const handlePaperUpdated = (paper) => {
+    setPapers((current) => current.map((item) => (item.id === paper.id ? paper : item)))
+    setPaperToEdit(paper)
+    setPreviewPaper((current) => (current?.id === paper.id ? paper : current))
+  }
+
+  const handlePaperDeleted = async (paper) => {
+    if (!window.confirm(`Delete "${paper.title}"? This cannot be undone.`)) {
+      return false
+    }
+
+    try {
+      await api.delete(`/papers/${paper.id}`)
+      setPapers((current) => current.filter((item) => item.id !== paper.id))
+      if (paperToEdit?.id === paper.id) setPaperToEdit(null)
+      if (previewPaper?.id === paper.id) setPreviewPaper(null)
+      await fetchPapers({ silent: true })
+      return true
+    } catch (error) {
+      setPapersError(error.message || 'Unable to delete this paper.')
+      return false
+    }
+  }
+
+  const handleEditPaper = (paper) => {
+    if (!paper?.id) return
+    setPaperToEdit(paper)
+    setActiveTab('generate')
+  }
+
+  const handlePreviewPaper = (paper, mode = 'paper') => {
+    if (!paper?.id) return
+    setPreviewPaper(paper)
+    setPreviewMode(mode)
+    setActiveTab('paper-preview')
+  }
+
+  const handleDownloadPaper = async (paper, answerKey = false) => {
+    if (!paper?.id) return
+    setPapersError('')
+    try {
+      await api.download(`/papers/${paper.id}${answerKey ? '/answers/pdf' : '/pdf'}`)
+    } catch (error) {
+      setPapersError(error.message || 'Unable to download this PDF.')
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -330,47 +439,6 @@ export default function AdminDashboard() {
     setUploading(true)
     setUploadProgress(0)
 
-    if (isDevSession) {
-      const fileType = getFileType(selectedFile.name)
-      const devId = crypto.randomUUID?.() || `${selectedFile.name}-${selectedFile.size}-${selectedFile.lastModified}`
-      const storedFilename = `${devId}.${fileType}`
-      const uploadedAt = new Date(selectedFile.lastModified || 0).toISOString()
-      const devDocument = {
-        id: `dev-${devId}`,
-        user_id: user.id || 'dev-admin-id',
-        title: title.trim(),
-        original_filename: selectedFile.name,
-        stored_filename: storedFilename,
-        file_type: fileType,
-        file_size: selectedFile.size,
-        upload_path: `uploads/${storedFilename}`,
-        subject: subject.trim() || null,
-        description: description.trim() || null,
-        extracted_text: '',
-        page_count: 0,
-        word_count: fileType === 'txt' ? (await selectedFile.text()).split(/\s+/).filter(Boolean).length : 0,
-        status: 'uploaded',
-        created_at: uploadedAt,
-        updated_at: uploadedAt,
-      }
-
-      const timer = window.setInterval(() => {
-        setUploadProgress((current) => Math.min(current + 20, 90))
-      }, 120)
-
-      await new Promise((resolve) => window.setTimeout(resolve, 750))
-      window.clearInterval(timer)
-      const nextDocuments = [devDocument, ...getStoredDevDocuments()]
-      saveStoredDevDocuments(nextDocuments)
-      setDocuments(nextDocuments)
-      setUploadProgress(100)
-      setUploadSuccess(true)
-      setUploading(false)
-      resetUploadForm()
-      window.setTimeout(() => setUploadSuccess(false), 2500)
-      return
-    }
-
     try {
       const formData = new FormData()
       formData.append('file', selectedFile)
@@ -414,18 +482,12 @@ export default function AdminDashboard() {
     setDeletingId(document.id)
     setDocumentsError('')
 
-    if (isDevSession) {
-      const nextDocuments = getStoredDevDocuments().filter((item) => item.id !== document.id)
-      saveStoredDevDocuments(nextDocuments)
-      setDocuments(nextDocuments)
-      setDeletingId('')
-      return
-    }
-
     try {
       await api.delete(`/documents/${document.id}`)
       setDocuments((current) => current.filter((item) => item.id !== document.id))
+      setPapers((current) => current.filter((paper) => paper.document_id !== document.id))
       await fetchDocuments({ silent: true })
+      await fetchPapers({ silent: true })
     } catch (error) {
       setDocumentsError(error.message || 'Unable to delete this document.')
     } finally {
@@ -433,7 +495,9 @@ export default function AdminDashboard() {
     }
   }
 
-  const activeItem = sidebarItems.find((i) => i.key === activeTab)
+  const activeItem = activeTab === 'paper-preview'
+    ? { label: previewMode === 'answers' ? 'Answer Key' : 'Paper Preview' }
+    : sidebarItems.find((i) => i.key === activeTab)
   const selectedFileType = getFileType(selectedFile?.name)
   const selectedFileDetails = selectedFileType ? getFileTypeDetails(selectedFileType) : null
 
@@ -474,8 +538,8 @@ export default function AdminDashboard() {
               {(user.name || 'A').charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold text-white">{user.name || 'Admin'}</p>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">Admin</p>
+              <p className="truncate text-xs font-bold text-white">{user.name || 'Teacher'}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-400">Teacher</p>
             </div>
           </div>
         </div>
@@ -527,22 +591,29 @@ export default function AdminDashboard() {
               <Menu className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2 text-sm font-bold text-white">
-              {activeItem && <activeItem.icon className="h-4 w-4 text-indigo-400" />}
+              {activeItem?.icon && <activeItem.icon className="h-4 w-4 text-indigo-400" />}
               {activeItem?.label || 'Dashboard'}
             </div>
           </div>
           <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-400">
-            Admin Panel
+            Teacher Workspace
           </span>
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          {papersError && activeTab !== 'history' && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs font-semibold text-red-300">
+              <AlertCircle className="h-4 w-4" />
+              {papersError}
+            </div>
+          )}
+
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-                    Welcome back, <span className="text-indigo-400">{user.name || 'Admin'}</span>
+                    Welcome back, <span className="text-indigo-400">{user.name || 'Teacher'}</span>
                   </h1>
                   <p className="mt-1 text-xs text-zinc-500">Here is an overview of your academic workspace.</p>
                 </div>
@@ -611,22 +682,28 @@ export default function AdminDashboard() {
 
               <div className="rounded-2xl border border-[#1a1a2e] bg-[#0f0f14] p-5">
                 <h3 className="mb-4 text-sm font-bold">Recent Activity</h3>
-                {recentDocuments.length > 0 ? (
+                {recentActivity.length > 0 ? (
                   <div className="space-y-3">
-                    {recentDocuments.map((document) => {
-                      const fileDetails = getFileTypeDetails(document.file_type)
+                    {recentActivity.map((activity) => {
+                      const isPaper = activity.type === 'paper'
+                      const fileDetails = isPaper
+                        ? {
+                            label: 'PAPER',
+                            iconClass: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+                          }
+                        : getFileTypeDetails(activity.fileType)
                       return (
                         <div
-                          key={document.id}
+                          key={activity.id}
                           className="flex items-center gap-3 rounded-xl border border-[#202033] bg-[#09090B] p-3"
                         >
                           <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${fileDetails.iconClass}`}>
-                            <FileTypeIcon type={document.file_type} className="h-4 w-4" />
+                            {isPaper ? <FileCheck className="h-4 w-4" /> : <FileTypeIcon type={activity.fileType} className="h-4 w-4" />}
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-bold text-white">{document.title}</p>
+                            <p className="truncate text-xs font-bold text-white">{activity.title}</p>
                             <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-600">
-                              {fileDetails.label} - {formatDate(document.created_at)}
+                              {isPaper ? `${activity.questionCount} questions` : fileDetails.label} - {formatDate(activity.createdAt)}
                             </p>
                           </div>
                         </div>
@@ -738,7 +815,7 @@ export default function AdminDashboard() {
                       ) : (
                         <AlertCircle className="h-4 w-4" />
                       )}
-                      {uploadSuccess ? 'Document uploaded successfully.' : formError}
+                      {uploadSuccess ? 'Document uploaded and processed successfully.' : formError}
                     </div>
                   )}
 
@@ -770,7 +847,7 @@ export default function AdminDashboard() {
                       disabled={uploading}
                       required
                       className="w-full rounded-xl border border-[#27272A] bg-[#09090B] px-3 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-700 focus:border-indigo-500"
-                      placeholder="Operating System Unit 2"
+                      placeholder="Document title"
                     />
                   </div>
 
@@ -784,7 +861,7 @@ export default function AdminDashboard() {
                       onChange={(event) => setSubject(event.target.value)}
                       disabled={uploading}
                       className="w-full rounded-xl border border-[#27272A] bg-[#09090B] px-3 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-700 focus:border-indigo-500"
-                      placeholder="Computer Science"
+                      placeholder="Subject"
                     />
                   </div>
 
@@ -866,11 +943,59 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {activeTab === 'generate' && <GeneratePaper />}
-          {activeTab === 'question-bank' && <QuestionBank />}
-          {activeTab === 'history' && <HistorySection />}
-          {activeTab === 'analytics' && <Analytics />}
-          {activeTab === 'settings' && <AdminSettings />}
+          {activeTab === 'generate' && (
+            <GeneratePaper
+              documents={documents}
+              papers={papers}
+              paperToEdit={paperToEdit}
+              onPaperGenerated={handlePaperGenerated}
+              onPaperUpdated={handlePaperUpdated}
+              onPapersRefresh={fetchPapers}
+              onPreviewPaper={(paper) => handlePreviewPaper(paper, 'paper')}
+              onViewAnswers={(paper) => handlePreviewPaper(paper, 'answers')}
+              onDownloadPaper={(paper) => handleDownloadPaper(paper, false)}
+              onDownloadAnswers={(paper) => handleDownloadPaper(paper, true)}
+            />
+          )}
+          {activeTab === 'question-bank' && (
+            <QuestionBank
+              papers={papers}
+              onPreviewPaper={(paper) => handlePreviewPaper(paper, 'paper')}
+              onViewAnswers={(paper) => handlePreviewPaper(paper, 'answers')}
+              onDownloadPaper={(paper) => handleDownloadPaper(paper, false)}
+              onDownloadAnswers={(paper) => handleDownloadPaper(paper, true)}
+              onEditPaper={handleEditPaper}
+              onDeletePaper={handlePaperDeleted}
+            />
+          )}
+          {activeTab === 'history' && (
+            <HistorySection
+              papers={papers}
+              loading={papersLoading}
+              error={papersError}
+              onPreviewPaper={(paper) => handlePreviewPaper(paper, 'paper')}
+              onViewAnswers={(paper) => handlePreviewPaper(paper, 'answers')}
+              onDownloadPaper={(paper) => handleDownloadPaper(paper, false)}
+              onDownloadAnswers={(paper) => handleDownloadPaper(paper, true)}
+              onEditPaper={handleEditPaper}
+              onDeletePaper={handlePaperDeleted}
+            />
+          )}
+          {activeTab === 'paper-preview' && (
+            <PaperPreview
+              key={`${previewPaper?.id || 'none'}-${previewMode}`}
+              paper={previewPaper}
+              initialMode={previewMode}
+              onBack={() => setActiveTab('history')}
+              onEdit={handleEditPaper}
+              onDelete={async (paper) => {
+                const deleted = await handlePaperDeleted(paper)
+                if (deleted) setActiveTab('history')
+              }}
+            />
+          )}
+          {activeTab === 'analytics' && <Analytics documents={documents} papers={papers} />}
+          {activeTab === 'settings' && <TeacherSettings user={user} />}
         </div>
       </main>
     </div>

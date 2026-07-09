@@ -4,18 +4,17 @@ import Login from '../pages/Login'
 import Signup from '../pages/Signup'
 import ForgotPassword from '../pages/ForgotPassword'
 import VerifyOTP from '../pages/VerifyOTP'
-import AdminDashboard from '../pages/AdminDashboard'
+import TeacherDashboard from '../pages/TeacherDashboard'
+import SystemAdminDashboard from '../pages/SystemAdminDashboard'
 import StudentDashboard from '../pages/StudentDashboard'
 
 /**
- * Redirects unauthenticated users to /login.
+ * Returns the dashboard path for the authenticated role.
  */
-function ProtectedRoute({ children }) {
-  const token = localStorage.getItem('token')
-  if (!token) {
-    return <Navigate to="/login" replace />
-  }
-  return children
+function getDashboardPath(role) {
+  if (role === 'teacher') return '/dashboard/teacher'
+  if (role === 'admin') return '/dashboard/admin'
+  return '/dashboard/student'
 }
 
 /**
@@ -30,7 +29,7 @@ function RoleGuard({ requiredRole, children }) {
 
   const role = localStorage.getItem('role') || 'student'
   if (role !== requiredRole) {
-    return <Navigate to={role === 'admin' ? '/dashboard/admin' : '/dashboard/student'} replace />
+    return <Navigate to={getDashboardPath(role)} replace />
   }
 
   return children
@@ -45,7 +44,7 @@ function DashboardRedirect() {
     return <Navigate to="/login" replace />
   }
   const role = localStorage.getItem('role') || 'student'
-  return <Navigate to={role === 'admin' ? '/dashboard/admin' : '/dashboard/student'} replace />
+  return <Navigate to={getDashboardPath(role)} replace />
 }
 
 export default function AppRoutes() {
@@ -61,12 +60,22 @@ export default function AppRoutes() {
         {/* Legacy /dashboard redirects to role-based path */}
         <Route path="/dashboard" element={<DashboardRedirect />} />
 
-        {/* Admin Dashboard */}
+        {/* Teacher Dashboard */}
+        <Route
+          path="/dashboard/teacher"
+          element={
+            <RoleGuard requiredRole="teacher">
+              <TeacherDashboard />
+            </RoleGuard>
+          }
+        />
+
+        {/* Hidden System Admin Dashboard */}
         <Route
           path="/dashboard/admin"
           element={
             <RoleGuard requiredRole="admin">
-              <AdminDashboard />
+              <SystemAdminDashboard />
             </RoleGuard>
           }
         />

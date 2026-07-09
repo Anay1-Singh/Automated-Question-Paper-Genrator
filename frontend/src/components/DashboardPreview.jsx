@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import {
   Search,
   Settings,
@@ -11,14 +10,12 @@ import {
   Edit2,
   Check,
   Plus,
-  Play,
   RotateCcw,
   Sparkles,
   ChevronDown
 } from 'lucide-react'
 
 export default function DashboardPreview() {
-  const [activeTab, setActiveTab] = useState('questions')
   const [selectedDifficulty, setSelectedDifficulty] = useState('balanced')
 
   const initialQuestions = [
@@ -154,10 +151,10 @@ export default function DashboardPreview() {
               <div className="h-px bg-[#27272A]/70" />
 
               <div className="flex flex-col gap-1.5">
-                <span className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Recent Papers</span>
-                <a href="#" className="px-3 py-1.5 text-xs text-[#A1A1AA] hover:text-white truncate block">CST-402 Deep Learning</a>
-                <a href="#" className="px-3 py-1.5 text-xs text-[#A1A1AA] hover:text-white truncate block">MAT-201 Linear Algebra</a>
-                <a href="#" className="px-3 py-1.5 text-xs text-[#A1A1AA] hover:text-white truncate block">PHY-105 Quantum Mech</a>
+                <span className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Workspace</span>
+                <span className="px-3 py-1.5 text-xs text-[#A1A1AA] truncate block">Uploaded documents</span>
+                <span className="px-3 py-1.5 text-xs text-[#A1A1AA] truncate block">Generated papers</span>
+                <span className="px-3 py-1.5 text-xs text-[#A1A1AA] truncate block">Question bank</span>
               </div>
             </aside>
 
@@ -168,13 +165,13 @@ export default function DashboardPreview() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-5 border-b border-[#27272A]">
                 <div>
                   <div className="flex items-center gap-2.5 mb-1.5">
-                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">CST-402: Deep Learning Final Exam</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">AI-Generated Question Paper</h1>
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded border border-emerald-500/25 bg-emerald-500/5 text-emerald-400 text-[10px] font-semibold uppercase">
                       <span className="w-1 h-1 bg-emerald-500 rounded-full" />
                       Bloom Checked
                     </span>
                   </div>
-                  <p className="text-xs text-zinc-500">Department: Computer Science and Engineering &bull; Target Term: Winter Semester 2026</p>
+                  <p className="text-xs text-zinc-500">Built from authenticated workspace documents and teacher configuration</p>
                 </div>
                 
                 <div className="flex items-center gap-3 w-full sm:w-auto">

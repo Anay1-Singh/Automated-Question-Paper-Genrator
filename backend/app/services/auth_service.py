@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 USERS_COLLECTION = "users"
 OTP_COLLECTION = "otp_verifications"
+PUBLIC_SIGNUP_ROLES = {"teacher", "student"}
 
 
 # =====================================================
@@ -88,6 +89,22 @@ async def check_existing_user(
     return user is not None
 
 
+def validate_public_signup_role(role: str) -> str:
+    """
+    Allow only public self-service registration roles.
+
+    The hidden ``admin`` role remains supported for existing or manually
+    provisioned MongoDB accounts, but it is never accepted through signup.
+    """
+    normalized_role = role.lower().strip()
+    if normalized_role not in PUBLIC_SIGNUP_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid signup role. Choose teacher or student.",
+        )
+    return normalized_role
+
+
 # =====================================================
 # Registration
 # =====================================================
@@ -97,6 +114,7 @@ async def register_user(
     name: str,
     email: str,
     password: str,
+    role: str = "teacher",
 ) -> dict:
     """
     Register a new user in the ``users`` collection.
@@ -119,6 +137,8 @@ async def register_user(
     Raises:
         HTTPException 409: If the email is already registered.
     """
+    role = validate_public_signup_role(role)
+
     # 1. Duplicate check
     if await check_existing_user(db, email):
         raise HTTPException(
@@ -134,6 +154,7 @@ async def register_user(
         name=name,
         email=email,
         hashed_password=hashed,
+        role=role,
     )
 
     result = await db[USERS_COLLECTION].insert_one(user_doc)
@@ -231,7 +252,7 @@ async def send_otp_code(
     name: str,
     email: str,
     password: str,
-    role: str = "student",
+    role: str = "teacher",
 ) -> dict:
     """
     Generate and save a new OTP, and dispatch a verification email.
@@ -240,6 +261,7 @@ async def send_otp_code(
     hashes the password, and upserts the verification record.
     """
     email_clean = email.lower().strip()
+    role = validate_public_signup_role(role)
 
     # 1. Check duplicate user in users
     if await check_existing_user(db, email_clean):
@@ -357,11 +379,12 @@ async def verify_otp_code(
         )
 
     # Insert user
+    signup_role = validate_public_signup_role(otp_record.get("role", "teacher"))
     user_doc = create_user_document(
         name=otp_record["name"],
         email=otp_record["email"],
         hashed_password=otp_record["password"],
-        role=otp_record.get("role", "student"),
+        role=signup_role,
     )
     user_doc["created_at"] = otp_record.get("created_at", now)
     user_doc["updated_at"] = now
@@ -374,7 +397,7 @@ async def verify_otp_code(
 
     # 6. Generate JWT token
     access_token = create_access_token(
-        data={"sub": user_doc["email"], "role": user_doc.get("role", "student")}
+        data={"sub": user_doc["email"], "role": user_doc.get("role", "teacher")}
     )
 
     # Trigger background cleanup of other expired OTPs

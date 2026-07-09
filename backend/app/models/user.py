@@ -12,7 +12,7 @@ def create_user_document(
     name: str,
     email: str,
     hashed_password: str,
-    role: str = "student",
+    role: str = "teacher",
 ) -> dict:
     """
     Build a user document ready for insertion into MongoDB.
@@ -21,7 +21,7 @@ def create_user_document(
         name: The user's display name.
         email: The user's email address (will be stored lowercase).
         hashed_password: The bcrypt-hashed password.
-        role: The user's role (admin or student).
+        role: The user's role (teacher, student, or hidden admin).
 
     Returns:
         A dictionary matching the ``users`` collection schema.
