@@ -13,6 +13,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 
 from app.api.ai import router as ai_router
 from app.api.auth import router as auth_router
@@ -80,6 +81,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.get(
+    "/routes",
+    tags=["Debug"],
+    summary="List Registered Routes",
+    description="Temporary debugging endpoint to inspect all registered FastAPI routes."
+)
+async def list_routes():
+    routes = []
+
+    for route in app.routes:
+        if isinstance(route, APIRoute):
+            routes.append({
+                "path": route.path,
+                "name": route.name,
+                "methods": sorted(list(route.methods))
+            })
+
+    routes.sort(key=lambda x: x["path"])
+    return {
+        "total_routes": len(routes),
+        "routes": routes
+    }
 
 # =====================================================
 # Middleware — CORS
