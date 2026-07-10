@@ -13,3 +13,4 @@ pymupdf
 python-docx
 google-genai
 reportlab
+resend

@@ -1,47 +1,39 @@
 """
 PaperMind AI - Email Service
 
-Handles sending transactional emails via SMTP.
-Runs synchronous SMTP connections in a background thread to prevent
-blocking the FastAPI async event loop.
+Handles sending transactional emails via the Resend HTTPS API.
+Uses asyncio.to_thread to keep FastAPI's event loop non-blocking.
 """
 
 import asyncio
 import logging
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+
+import resend
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Initialize the Resend SDK with the configured API key.
+resend.api_key = settings.RESEND_API_KEY
 
-def _send_smtp_email(to_email: str, subject: str, text_body: str, html_body: str) -> None:
+
+def _send_resend_email(to_email: str, subject: str, text_body: str, html_body: str) -> None:
     """
-    Synchronous helper to connect to SMTP, authenticate, and send the email.
-    Should be run in a separate thread.
+    Synchronous helper that calls the Resend API to send an email.
+    Should be run in a separate thread via asyncio.to_thread.
     """
-    message = MIMEMultipart("alternative")
-    message["Subject"] = subject
-    message["From"] = f"PaperMind AI <{settings.SMTP_EMAIL}>"
-    message["To"] = to_email
-
-    # Attach both text and HTML versions
-    part1 = MIMEText(text_body, "plain")
-    part2 = MIMEText(html_body, "html")
-    message.attach(part1)
-    message.attach(part2)
-
     try:
-        # Connect to SMTP server using TLS
-        with smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT, timeout=10) as server:
-            server.starttls()
-            server.login(settings.SMTP_EMAIL, settings.SMTP_APP_PASSWORD)
-            server.sendmail(settings.SMTP_EMAIL, to_email, message.as_string())
+        resend.Emails.send({
+            "from": "PaperMind AI <onboarding@resend.dev>",
+            "to": [to_email],
+            "subject": subject,
+            "html": html_body,
+            "text": text_body,
+        })
         logger.info("Email sent successfully to %s", to_email)
     except Exception as exc:
-        logger.error("Failed to send SMTP email to %s: %s", to_email, exc)
+        logger.error("Failed to send email to %s: %s", to_email, exc)
         raise RuntimeError(f"Email delivery failed: {exc}") from exc
 
 
@@ -49,7 +41,8 @@ async def send_verification_email(email: str, name: str, otp: str) -> None:
     """
     Dispatch an OTP verification email to the user.
 
-    Uses asyncio.to_thread to run smtplib in a background thread pool.
+    Uses asyncio.to_thread to run the synchronous Resend SDK call
+    in a background thread pool.
     """
     subject = "PaperMind AI Verification Code"
 
@@ -154,9 +147,9 @@ async def send_verification_email(email: str, name: str, otp: str) -> None:
     </html>
     """
 
-    # Run blocking SMTP code in thread pool
+    # Run the synchronous Resend SDK call in a thread pool
     await asyncio.to_thread(
-        _send_smtp_email,
+        _send_resend_email,
         to_email=email,
         subject=subject,
         text_body=text_body,

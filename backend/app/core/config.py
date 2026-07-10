@@ -22,6 +22,7 @@ class Settings(BaseSettings):
         UPLOAD_DIRECTORY: Directory path for storing uploaded files.
         GEMINI_API_KEY: Google Gemini API key used by centralized AI services.
         GEMINI_MODEL: Gemini model name used for document intelligence.
+        RESEND_API_KEY: API key for the Resend email delivery service.
     """
 
     ENVIRONMENT: str = "development"
@@ -40,16 +41,14 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str | None = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
-    # SMTP Configuration
-    SMTP_EMAIL: str
-    SMTP_APP_PASSWORD: str
-    SMTP_SERVER: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
+    # Resend Email Delivery
+    RESEND_API_KEY: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        extra="ignore",
     )
 
 
