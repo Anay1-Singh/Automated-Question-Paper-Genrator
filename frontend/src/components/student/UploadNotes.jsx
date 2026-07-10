@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import axios from 'axios'
+import apiClient from '../../lib/api'
 import {
   AlertCircle,
   BookOpen,
@@ -155,7 +156,7 @@ export default function UploadNotes({
       formData.append('title', title.trim())
       if (subject.trim()) formData.append('subject', subject.trim())
 
-      const response = await axios.post(`${API_BASE_URL}/documents/upload`, formData, {
+      const response = await apiClient.post(`/documents/upload`, formData, {
         headers: { Authorization: `Bearer ${token}` },
         onUploadProgress: (progressEvent) => {
           if (!progressEvent.total) return

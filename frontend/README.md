@@ -1,16 +1,55 @@
-# React + Vite
+# PaperMind AI - Frontend Portal
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The frontend interface for PaperMind AI, a production-grade question paper generation platform. It provides role-based access for Teachers (Admin) and Students, offering tailored dashboards for uploading study materials, managing question banks, and generating customized exam papers.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 18+ (Vite)
+- JavaScript (JSX)
+- Tailwind CSS
+- React Router DOM
+- Axios (API Client)
+- Lucide React (Icons)
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Role-Based Dashboards**: Distinct interfaces for Teachers (Admin) and Students.
+- **Authentication Flow**: Secure login and signup flows with email OTP verification.
+- **Teacher Tools**: Interfaces for generating papers based on Bloom's Taxonomy, managing question banks, uploading documents, and viewing analytics.
+- **Student Tools**: Interfaces for uploading study notes, viewing AI-generated summaries, tracking study focus areas, and revising important topics.
+- **Responsive UI**: Fully responsive design with a modern, dark-themed aesthetic.
 
-## Expanding the ESLint configuration
+## Configuration
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The frontend uses environment variables for configuration. Create the appropriate `.env` files based on your environment.
+
+### Local Development (.env.local)
+
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+### Production (.env / Vercel Dashboard)
+
+```env
+VITE_API_URL=https://automated-question-paper-genrator.onrender.com
+```
+
+## Installation and Setup
+
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Start Development Server**:
+   ```bash
+   npm run dev
+   ```
+   The application will be available at `http://localhost:5173`.
+
+3. **Production Build**:
+   ```bash
+   npm run build
+   ```
+   Deploy the `dist/` folder to your static hosting provider (e.g., Vercel, Netlify).

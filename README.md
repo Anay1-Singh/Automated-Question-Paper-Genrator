@@ -300,3 +300,17 @@ To compile the static production build of the frontend, run:
 npm run build
 ```
 Deploy the resulting contents of the `dist/` directory to static hosting services (e.g., Netlify, Vercel, or AWS S3).
+
+## Deployment Configuration
+
+The frontend uses environment variables to configure its API backend URL. Set the following environment variable according to your environment:
+
+**Development** (in `.env.local`):
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+**Production** (in Vercel/Netlify Dashboard):
+```env
+VITE_API_URL=https://automated-question-paper-genrator.onrender.com
+```

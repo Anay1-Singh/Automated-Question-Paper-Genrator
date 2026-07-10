@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import apiClient from '../lib/api'
 import {
   LayoutDashboard,
   Upload,
@@ -446,14 +447,11 @@ export default function TeacherDashboard() {
       if (subject.trim()) formData.append('subject', subject.trim())
       if (description.trim()) formData.append('description', description.trim())
 
-      const response = await axios.post(`${API_BASE_URL}/documents/upload`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await apiClient.post(`/documents/upload`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
         onUploadProgress: (progressEvent) => {
           if (!progressEvent.total) return
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-          setUploadProgress(Math.min(percent, 99))
+          setUploadProgress(Math.min(Math.round((progressEvent.loaded * 100) / progressEvent.total), 99))
         },
       })
 
