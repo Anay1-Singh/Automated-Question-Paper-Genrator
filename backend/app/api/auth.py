@@ -8,8 +8,10 @@ All business logic is delegated to :mod:`app.services.auth_service`.
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from typing import Union
 
-from app.core.security import decode_access_token
+from app.core.config import settings
+from app.core.security import decode_access_token, create_access_token
 from app.database.mongodb import get_database
 from app.models.user import user_document_to_response
 from app.schemas.auth import (
@@ -42,7 +44,7 @@ router = APIRouter(
 
 @router.post(
     "/signup",
-    response_model=MessageResponse,
+    response_model=Union[MessageResponse, TokenResponse],
     status_code=200,
     summary="Register a new user (Initiates OTP verification)",
     description=(
@@ -75,8 +77,25 @@ router = APIRouter(
 async def signup(
     payload: SignupRequest,
     db: AsyncIOMotorDatabase = Depends(get_database),
-) -> MessageResponse:
+) -> Union[MessageResponse, TokenResponse]:
     """Initiate registration flow and send verification OTP."""
+    if settings.DEMO_MODE:
+        user = await register_user(
+            db=db,
+            name=payload.name,
+            email=payload.email,
+            password=payload.password,
+            role=payload.role,
+        )
+        access_token = create_access_token(
+            data={"sub": user["email"], "role": user.get("role", "teacher")}
+        )
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user=user
+        )
+
     result = await send_otp_code(
         db=db,
         name=payload.name,
@@ -89,7 +108,7 @@ async def signup(
 
 @router.post(
     "/send-otp",
-    response_model=MessageResponse,
+    response_model=Union[MessageResponse, TokenResponse],
     status_code=200,
     summary="Send verification OTP",
     description="Generates and sends a new verification OTP to the user's email.",
@@ -119,8 +138,25 @@ async def signup(
 async def send_otp(
     payload: SignupRequest,
     db: AsyncIOMotorDatabase = Depends(get_database),
-) -> MessageResponse:
+) -> Union[MessageResponse, TokenResponse]:
     """Send a verification OTP to the user's email address."""
+    if settings.DEMO_MODE:
+        user = await register_user(
+            db=db,
+            name=payload.name,
+            email=payload.email,
+            password=payload.password,
+            role=payload.role,
+        )
+        access_token = create_access_token(
+            data={"sub": user["email"], "role": user.get("role", "teacher")}
+        )
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user=user
+        )
+
     result = await send_otp_code(
         db=db,
         name=payload.name,

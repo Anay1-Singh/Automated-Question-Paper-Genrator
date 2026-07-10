@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     """
 
     ENVIRONMENT: str = "development"
+    DEMO_MODE: bool = False
 
     MONGODB_URI: str
     DATABASE_NAME: str = "papermind"
